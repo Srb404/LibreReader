@@ -212,11 +212,29 @@ function quit() {
 }
 
 // --- Bootstrap ---
+const SHORT_MODE = process.argv.includes('--short');
+
 try {
     await client.login();
 } catch (err) {
-    console.error(chalk.red(`\nNie udało się zalogować: ${err.message ?? err}`));
+    if (SHORT_MODE) console.error(`login failed: ${err.message ?? err}`);
+    else            console.error(chalk.red(`\nNie udało się zalogować: ${err.message ?? err}`));
     process.exit(1);
+}
+
+if (SHORT_MODE) {
+    try {
+        const reading = await client.read();
+        const arrow = TREND_ARROWS[reading.trendType] ?? '?';
+        const label = stripAnsi(glucoseLabel(reading.mgDl)).trim();
+        const ago   = timeSince(reading.timestamp);
+        // Format oczekiwany przez waybar/scripts/libre.sh — sekcje rozdzielone "  ".
+        process.stdout.write(`${reading.mgDl} mg/dL ${arrow}  ${label}  ${ago}\n`);
+        process.exit(0);
+    } catch (err) {
+        console.error(`read failed: ${err.message ?? err}`);
+        process.exit(1);
+    }
 }
 
 await refresh();
